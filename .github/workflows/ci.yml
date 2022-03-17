@@ -87,8 +87,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
       - name: Get minimal supported version from Cargo.toml
-        run: |
-          MSRV_RUST_VERSION=$(sed -En 's/rust-version[[:space:]]*=[[:space:]]*"([^"]+)"/\1/p' Cargo.toml | head -1)
+        run: | 
+          # FIXME extract rust-version from Cargo.toml do not work with workspace
+          # MSRV_RUST_VERSION=$(sed -En 's/rust-version[[:space:]]*=[[:space:]]*"([^"]+)"/\1/p' Cargo.toml | head -1)
+          MSRV_RUST_VERSION="1.56"
           echo "MSRV_RUST_VERSION=$MSRV_RUST_VERSION" >> $GITHUB_ENV
       - name: Install MSRV Rust toolchain
         uses: actions-rs/toolchain@v1
