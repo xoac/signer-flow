@@ -13,83 +13,88 @@ Small project to build sign system with Rust and confluence platform
 3. each `signer-service` will be produce response to `resp_topic` topic that is know from request header
 4. number of `signer-service` should be less or equal to `signer.v1` topic partitions to benefit from horizontal scaling
 
-## Further improvements
-
-Since this is example app and not fully production application here are summary of improvements that could be added.
-
-1. The biggest demo problem is with `./k8s/singer-flow.yaml` and running `singer-rest-api` instances. There are 2 possible improvements to current boilerplate solution:
-  1. Use `helm` and template engine to generate instances in loop
-  2. Each `signer-rest-api` instance could create unique topic with prefix `signer.v1.resp` at startup (I would choose this as improved)
-2. Add system testing
-3. `Dockerfile`s file are nearly the same and could be unified
-4. Rust:
-  1. apps use a lot of `expect()` and `unwrap()` also for external input
-  2. Some code could be shared between `signer-service` and `signer-rest-api`
-  3. Error handling could me much more improved (for example do not pass all KafkaError to end user)
-5. Topic schemas could be added
-6. browser js client could use json and distinguish error from correct responses
-7. Add CD to publish new releases to docker hub
-
 ## Run with `minikube`
 
 ### Running
 
 1. Run confluence platform for this example I used [quickstart-deploy example] as base.
+    Here are commands that allowed me to run this on Linux machine. (This may require install additional software).
 
-Here are commands that allowed me to run this on Linux machine. (This may require install additional software).
+    Prepare (in `signer-flow` working dictionary)
 
-Prepare (in `signer-flow` working dictionary)
+    ```sh
+    minikube start --driver=kvm2 --memory 6144 --cpus 6
+    # here you need to wait a few secs
+    kubectl create namespace confluent
+    kubectl config set-context --current --namespace=confluent
+    helm repo add confluentinc https://packages.confluent.io/helm
+    helm upgrade --install operator confluentinc/confluent-for-kubernetes
+    ```
 
-```
-minikube start --driver=kvm2 --memory 6144 --cpus 6
-# here you need to wait a few secs
-kubectl create namespace confluent
-kubectl config set-context --current --namespace=confluent
-helm repo add confluentinc https://packages.confluent.io/helm
-helm upgrade --install operator confluentinc/confluent-for-kubernetes
-```
+2. Run confluent platform:
+    ```sh
+    kubectl apply -f k8s/confluent-platform-singlenode.yaml
+    ```
 
-Run confluent platform:
-```
-kubectl apply -f k8s/confluent-platform-singlenode.yaml
-```
+3. Run signer flow:
+    ```sh
+    kubectl apply -f k8s/singer-flow.yaml
+    ```
 
-Run signer flow:
-```
-kubectl apply -f k8s/singer-flow.yaml
-```
+### Access to application
 
-### Checking
+The value returned by below commands will probably be different in your case
 
-Get current node ip:
-```
-minikube ip
-```
-In my case it was `192.168.39.211`
+1. Get current node ip:
+    ```sh
+    minikube ip
+    ```
+    In my case it was `192.168.39.211`
 
-Find `singer-rest-api` port:
-```
-kubectl get services signer-rest-api
-```
-The port will be generated so output will be different. In my case the port is `32718`
-```
-NAME              TYPE       CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
-signer-rest-api   NodePort   10.105.210.60   <none>        80:32718/TCP   36m
-```
+2. Find `singer-rest-api` port:
+    ```sh
+    kubectl get services signer-rest-api
+    ```
 
-Now open browser with `http://192.168.39.211:32718/sign` and input some text to sign. The ape use base64 encoder to sign messages.
+    The port will be generated so output will be different. In my case the port is `32718`
+    ```
+    NAME              TYPE       CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+    signer-rest-api   NodePort   10.105.210.60   <none>        80:32718/TCP   36m
+    ```
+
+3. Get access in browser: `http://192.168.39.211:32718/sign`  
+    - to test input some text to sign and press submit button. The ape use base64 encoder to sign messages.
+    - the output will returned with `ok: <signed_msg>` or `err: <err>` if error occurs
+
+[quickstart-deploy example]: https://github.com/confluentinc/confluent-kubernetes-examples/tree/master/quickstart-deploy
 
 ### Monitoring
 
 1. Monitor k8s local cluster `minikube dashboard --url`
 2. Monitor confluent platform
-```
-kubectl port-forward controlcenter-0 9021:9021
-```
+    ```sh
+    kubectl port-forward controlcenter-0 9021:9021
+    ```
+    now open control center website: `http://localhost:9021`
 
-now open control center website: `http://localhost:9021`
+## Further improvements
 
-[quickstart-deploy example]: https://github.com/confluentinc/confluent-kubernetes-examples/tree/master/quickstart-deploy
+Since this is example app and not fully production application here are summary of improvements that could be added.
+
+1. The biggest demo problem is with `./k8s/singer-flow.yaml` and running `singer-rest-api` instances. There are 2 possible improvements to current boilerplate solution:
+    1. Use `helm` and template engine to generate instances in loop
+    2. Each `signer-rest-api` instance could create unique topic with prefix `signer.v1.resp` at startup (I would choose this as improved)
+2. Add system testing
+3. `Dockerfile`s file are nearly the same and could be unified
+4. Rust:
+    0. Application run with tokio task if such task panic other task can still run. Application can stop working correctly but still be running.
+    1. apps use a lot of `expect()` and `unwrap()` also for external input
+    2. Some code could be shared between `signer-service` and `signer-rest-api`
+    3. Error handling could me much more improved (for example do not pass all KafkaError to end user)
+5. Topic schemas could be added
+6. browser js client could use json and distinguish error from correct responses
+7. Add CD to publish new releases to docker hub
+
 
 ## License
 
