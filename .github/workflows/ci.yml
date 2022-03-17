@@ -1,0 +1,165 @@
+name: CI # Continuous Integration
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+{% raw  %}
+jobs:
+
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all-features --workspace
+
+  rustfmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          components: rustfmt
+      - name: Check formatting
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          components: clippy
+      - name: Clippy check
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --all-targets --all-features --workspace -- -D warnings
+
+  msrv:
+    name: MSRV
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Get minimal supported version from Cargo.toml
+        run: |
+          MSRV_RUST_VERSION=$(sed -En 's/rust-version[[:space:]]*=[[:space:]]*"([^"]+)"/\1/p' Cargo.toml | head -1)
+          echo "MSRV_RUST_VERSION=$MSRV_RUST_VERSION" >> $GITHUB_ENV
+      - name: Install MSRV Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env.MSRV_RUST_VERSION }}
+          profile: minimal
+          override: true
+      - name: "run tests for minimal supported rust version"
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all-features --workspace
+
+  hack:
+    name: Hack
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: "Install cargo hack "
+        uses: taiki-e/install-action@cargo-hack
+      - name: "cargo hack check each future"
+        run: cargo hack check --each-feature --no-dev-deps
+      - name: "cargo hack check future powerset"
+        run: cargo hack check --feature-powerset --no-dev-deps
+
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - name: Check documentation
+        env:
+          RUSTDOCFLAGS: -D warnings
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --no-deps --document-private-items --all-features --workspace
+
+  publish-dry-run:
+    name: Publish dry run
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: publish
+          args: --dry-run
+
+  coverage:
+    name: Code coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - name: Run cargo-tarpaulin
+        uses: actions-rs/tarpaulin@v0.1
+        with:
+          args: '--all-features --workspace --ignore-tests --out Lcov'
+      - name: Upload to Coveralls
+        # upload only if push
+        if: ${{ github.event_name == 'push' }}
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: './lcov.info'
+{% endraw  %}

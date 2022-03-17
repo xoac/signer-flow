@@ -1,0 +1,36 @@
+[package]
+authors = ["Sylwester Rąpała <sylwesterrapala@outlook.com>"]
+name = "signer-rest-api"
+version = "0.1.0"
+edition = "2021"
+
+license = "BSL-1.0"
+rust-version = "1.56"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tokio = { version = "1.17", features = ["macros", "rt-multi-thread"] }
+tokio-stream = { version = "0.1" }
+pin-project-lite = { version = "0.2" }
+futures = { version = "0.3" }
+
+anyhow = { version = "1.0" }
+thiserror = { version = "1.0" }
+
+# kafka
+rdkafka = { version = "0.28", features = ["cmake-build"] }
+
+# rest
+axum = { version = "0.4", features = ["ws", "headers"] }
+hyper = { version = "0.14", features = ["server"] }
+tower = "0.4"
+
+tower-http = { version = "0.2", features = ["trace"] }
+tracing-subscriber = "0.3"
+tracing = "0.1"
+
+uuid = { version = "0.8", features = ["v4"] }
+
+[target.'cfg(all(target_env = "musl", target_pointer_width = "64"))'.dependencies.jemallocator]
+version = "0.3"

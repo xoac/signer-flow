@@ -1,0 +1,6 @@
+[workspace]
+members = ["signer-service", "signer-rest-api"]
+
+[profile.release]
+strip = "none" # Use "symbols" to make docker images ~4Mb
+lto = false    # this make app more optimised but disable Docker cache and make recompile slower

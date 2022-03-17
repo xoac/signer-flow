@@ -1,0 +1,174 @@
+##################################
+# singer-service
+##################################
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: signer-service
+  labels:
+    app: singer-service
+spec:
+  serviceName: signer-service
+  podManagementPolicy: Parallel
+  replicas: 2
+  selector:
+    matchLabels:
+      app: signer-service
+  template:
+    metadata:
+      labels:
+        app: signer-service
+    spec:
+      containers:
+      - name: signer-service
+        image: sylwekrapala/signer-service:edge
+        imagePullPolicy: Always
+        env:
+          - name: "SIGNER_SERVICE_KAFKA_BROKERS"
+            value: "kafka.confluent.svc.cluster.local:9071"
+          - name: "RUST_LOG"
+            value: "signer_service=trace"
+          - name: "SIGNER_SERVICE_GROUP_ID"
+            value: "signer.v1.service"
+          - name: SIGNER_SERVICE_REQ_TOPIC
+            value: "signer.v1"
+        resources:
+          requests:
+            memory: 128Mi # 768Mi
+            cpu: 500m # 1000m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: signer-service
+spec:
+  clusterIP: None
+---
+apiVersion: platform.confluent.io/v1beta1
+kind: KafkaTopic
+metadata:
+  name: signer.v1
+  namespace: confluent
+spec:
+  replicas: 1
+  partitionCount: 12
+  configs:
+    cleanup.policy: "delete"
+
+
+##################################
+# singer-rest-api
+##################################
+# FIXME:
+# Here replicas do not work as expected. 
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: signer-rest-api
+spec:
+  type: NodePort
+  ipFamilyPolicy: SingleStack
+  selector:
+    app: signer-rest-api
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+## 1 producer
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: signer-rest-api
+  labels:
+    app: signer-rest-api
+spec:
+  serviceName: signer-rest-api
+  podManagementPolicy: Parallel
+  replicas: 1
+  selector:
+    matchLabels:
+      app: signer-rest-api
+  template:
+    metadata:
+      labels:
+        app: signer-rest-api
+    spec:
+      containers:
+      - name: signer-rest-api
+        image: sylwekrapala/signer-rest-api:edge
+        imagePullPolicy: Always
+        env:
+          - name: "SIGNER_REST_API_KAFKA_BROKERS"
+            value: "kafka.confluent.svc.cluster.local:9071"
+          - name: "RUST_LOG"
+            value: "signer_rest_api=trace,tower_http=trace"
+          - name: "SIGNER_REST_API_RES_TOPIC"
+            value: "signer.v1.resp0" #TODO: this must be in sync with KafkaTopic
+          - name: "SIGNER_REST_API_REQ_TOPIC"
+            value: "signer.v1"
+        resources:
+          requests:
+            memory: 128Mi # 768Mi
+            cpu: 500m # 1000m
+---
+apiVersion: platform.confluent.io/v1beta1
+kind: KafkaTopic
+metadata:
+  name: signer.v1.resp0
+  namespace: confluent
+spec:
+  replicas: 1
+  partitionCount: 1
+  configs:
+    cleanup.policy: "delete"
+# 2 producer
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: signer-rest-api1
+  labels:
+    app: signer-rest-api
+spec:
+  serviceName: signer-rest-api
+  podManagementPolicy: Parallel
+  replicas: 1
+  selector:
+    matchLabels:
+      app: signer-rest-api
+  template:
+    metadata:
+      labels:
+        app: signer-rest-api
+    spec:
+      containers:
+      - name: signer-rest-api
+        image: sylwekrapala/signer-rest-api:edge
+        imagePullPolicy: Always
+        env:
+          - name: "SIGNER_REST_API_KAFKA_BROKERS"
+            value: "kafka.confluent.svc.cluster.local:9071"
+          - name: "RUST_LOG"
+            value: "signer_rest_api=trace,tower_http=trace"
+          - name: "SIGNER_REST_API_RES_TOPIC"
+            value: "signer.v1.resp1" #TODO: this must be in sync with KafkaTopic
+          - name: "SIGNER_REST_API_REQ_TOPIC"
+            value: "signer.v1"
+        resources:
+          requests:
+            memory: 128Mi # 768Mi
+            cpu: 500m # 1000m
+---
+apiVersion: platform.confluent.io/v1beta1
+kind: KafkaTopic
+metadata:
+  name: signer.v1.resp1
+  namespace: confluent
+spec:
+  replicas: 1
+  partitionCount: 1
+  configs:
+    cleanup.policy: "delete"
+
