@@ -18,7 +18,7 @@ Small project to build sign system with Rust and confluence platform
 ### Running
 
 1. Run confluence platform for this example I used [quickstart-deploy example] as base.
-    Here are commands that allowed me to run this on Linux machine. (This may require install additional software).
+    Here are commands that allowed me to run this on Linux machine. (This may require installion of additional software).
 
     Prepare (in `signer-flow` working dictionary)
 
@@ -43,7 +43,7 @@ Small project to build sign system with Rust and confluence platform
 
 ### Access to application
 
-The value returned by below commands will probably be different in your case
+The value returned by commands below will probably be different in your case
 
 1. Get current node ip:
     ```sh
@@ -63,7 +63,7 @@ The value returned by below commands will probably be different in your case
     ```
 
 3. Get access in browser: `http://192.168.39.211:32718/sign`  
-    - to test input some text to sign and press submit button. The ape use base64 encoder to sign messages.
+    - to test - input some text to sign and press submit button. The app use base64 encoder to sign messages.
     - the output will returned with `ok: <signed_msg>` or `err: <err>` if error occurs
 
 [quickstart-deploy example]: https://github.com/confluentinc/confluent-kubernetes-examples/tree/master/quickstart-deploy
@@ -79,18 +79,18 @@ The value returned by below commands will probably be different in your case
 
 ## Further improvements
 
-Since this is example app and not fully production application here are summary of improvements that could be added.
+Since this is a demo application here is a summary of improvements that could be added
 
 1. The biggest demo problem is with `./k8s/singer-flow.yaml` and running `singer-rest-api` instances. There are 2 possible improvements to current boilerplate solution:
     1. Use `helm` and template engine to generate instances in loop
-    2. Each `signer-rest-api` instance could create unique topic with prefix `signer.v1.resp` at startup (I would choose this as improved)
+    2. Each `signer-rest-api` instance could create unique topic with prefix `signer.v1.resp` at startup (I would choose this as an improvment)
 2. Add system testing
-3. `Dockerfile`s file are nearly the same and could be unified
+3. `Dockerfile`s files are nearly the same and could be unified in one Dockerfile with build arguments.
 4. Rust:
-    0. Application run with tokio task if such task panic other task can still run. Application can stop working correctly but still be running.
-    1. apps use a lot of `expect()` and `unwrap()` also for external input
+    0. Application run with tokio tasks if for example one such task panics other tasks can still be running. Application can stop working correctly but still be running.
+    1. I use a lot of `expect()` and `unwrap()` also for external input
     2. Some code could be shared between `signer-service` and `signer-rest-api`
-    3. Error handling could me much more improved (for example do not pass all KafkaError to end user)
+    3. Error handling could be much improved (for example do not pass all KafkaError to end user)
 5. Topic schemas could be added
 6. browser js client could use json and distinguish error from correct responses
 7. Add CD to publish new releases to docker hub
